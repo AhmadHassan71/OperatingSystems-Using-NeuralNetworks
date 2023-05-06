@@ -7,6 +7,7 @@
 
 #define BUFF_SIZE 100
 
+int pipe1[2],pipe2[2],pipe3[2],pipe4[2];
 sem_t s1,s2,s3;
 pthread_mutex_t m1,m2;
 
@@ -55,6 +56,7 @@ Output layer:
 
 int main()
 {
+    pipe(pipe1);
     pthread_t readThread,t2,t3,t4;
     pthread_attr_t attr;
     pthread_attr_init(&attr);
