@@ -65,7 +65,7 @@ void *forwardLayer(void *args)
     fd2=open(_pipe2.c_str(),O_WRONLY);
     write(fd2, Hidden_Weights, sizeof(Hidden_Weights));
     close(fd2);
-    pthread_exit(NULL);
+    sem_post(&s1);
 }
 /*
 
@@ -105,7 +105,6 @@ int main()
 
     // create semaphores
     sem_init(&s1, 0, 0);
-    sem_init(&s2, 0, 0);
 
     // create pipes
     mkfifo(_pipe1.c_str(), 0666);
@@ -130,6 +129,5 @@ int main()
 
     // wait for threads to finish
     sem_wait(&s1);
-    sem_wait(&s2);
     return 0;
 }
