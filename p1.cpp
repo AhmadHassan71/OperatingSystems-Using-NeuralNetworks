@@ -10,6 +10,15 @@
 sem_t s1,s2,s3;
 pthread_mutex_t m1,m2;
 
+void* readInput(void* args){
+    float input_arr[2];
+    std::cout<<"Enter Weight 1 : ";
+    std::cin>>input_arr[0];
+    std::cout<<"Enter Weight 2 : ";
+    std::cin>>input_arr[1];
+
+}
+
 /*
 
 Creation of a neural network with 3 layers:
@@ -43,3 +52,15 @@ Output layer:
         weights -> output
 
 */
+
+int main()
+{
+    pthread_t readThread,t2,t3,t4;
+    pthread_attr_t attr;
+    pthread_attr_init(&attr);
+    pthread_attr_setdetachstate(&attr,PTHREAD_CREATE_DETACHED);
+    const struct sched_param param = {1};
+    pthread_setschedparam(readThread,SCHED_FIFO,&param);
+    pthread_create(&readThread,NULL,readInput,NULL);
+    return 0;
+}
