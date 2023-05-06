@@ -8,8 +8,8 @@
 
 #define BUFF_SIZE 100
 
-int pipe1[2],pipe2[2],pipe3[2],pipe4[2];
-sem_t s1,s2,s3;
+int pipe1[2],pipe2[2],pipe3[2],pipe4[2];    // pipe1 for input, pipe2 for hidden layer, pipe3 for calculation layer, pipe4 for output layer
+sem_t s1,s2,s3,s4;                          // s1 for input, s2 for hidden layer, s3 for calculation layer, s4 for output layer
 pthread_mutex_t m1,m2;
 
 void* readInput(void* args){
@@ -53,7 +53,6 @@ void* forwardLayer(void* args){
 /*
 
 Creation of a neural network with 3 layers:
-
 
 Input layer:
 input  -> 2 weights
