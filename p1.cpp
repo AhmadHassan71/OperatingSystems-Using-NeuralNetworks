@@ -2,14 +2,20 @@
 #include <string>
 #include <unistd.h>
 #include <sys/wait.h>
+#include <sys/stat.h>
 #include <pthread.h>
 #include <semaphore.h>
 #include <fcntl.h>
 
 #define BUFF_SIZE 100
 
-int pipe1[2], pipe2[2], pipe3[2], pipe4[2]; // pipe1 for input, pipe2 for hidden layer, pipe3 for calculation layer, pipe4 for output layer
-sem_t s1, s2, s3, s4;                       // s1 for input, s2 for hidden layer, s3 for calculation layer, s4 for output layer
+// pipe1 for input, pipe2 for hidden layer, pipe3 for calculation layer, pipe4 for output layer
+std::string _pipe1 = "pipe1";
+std::string _pipe2 = "pipe2"; 
+std::string _pipe3 = "pipe3";
+std::string _pipe4 = "pipe4";
+
+sem_t s1, s2, s3, s4;        // s1 for input, s2 for hidden layer, s3 for calculation layer, s4 for output layer
 pthread_mutex_t m1, m2;
 
 void *readInput(void *args)
@@ -22,17 +28,22 @@ void *readInput(void *args)
     std::cin >> input_arr[1];
 
     // Write input to pipe1
-    write(pipe1[1], input_arr, sizeof(input_arr));
-    close(pipe1[1]);
+    int fd=open(_pipe1.c_str(),O_WRONLY);
+    write(fd, input_arr, sizeof(input_arr));
+    close(fd);
     pthread_exit(NULL);
 }
 
 void *forwardLayer(void *args)
 {
     float input_arr[2];
+    char input_array[BUFF_SIZE];
+    int fd=open(_pipe1.c_str(),O_RDONLY);
     // Read input from pipe1
-    read(pipe1[0], input_arr, sizeof(input_arr));
-    close(pipe1[0]);
+    read(fd, input_arr, sizeof(input_arr));
+    close(fd);
+    std::cout<<"\nInput array : "<<input_arr[0]<<" "<<input_arr[1]<<std::endl;
+
 
     // Create matrix
     // Reading format is [a b c d e f g h] without the brackets and
@@ -50,8 +61,10 @@ void *forwardLayer(void *args)
     fclose(fp);
 
     // Write matrix to pipe2
-    write(pipe2[1], Hidden_Weights, sizeof(Hidden_Weights));
-    close(pipe2[1]);
+    int fd2;
+    fd2=open(_pipe2.c_str(),O_WRONLY);
+    write(fd2, Hidden_Weights, sizeof(Hidden_Weights));
+    close(fd2);
     pthread_exit(NULL);
 }
 /*
@@ -95,8 +108,8 @@ int main()
     sem_init(&s2, 0, 0);
 
     // create pipes
-    pipe(pipe1);
-    pipe(pipe2);
+    mkfifo(_pipe1.c_str(), 0666);
+    mkfifo(_pipe2.c_str(), 0666);
 
     pthread_t readThread, forwardThread, t3, t4;
 
@@ -107,10 +120,9 @@ int main()
     pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_DETACHED);
     pthread_attr_setdetachstate(&attr2, PTHREAD_CREATE_DETACHED);
 
-    // set thread priority
-    const struct sched_param param = {1};
-    pthread_setschedparam(readThread, SCHED_FIFO, &param);
-    pthread_setschedparam(forwardThread, SCHED_FIFO, &param);
+    // set thread scheduling policy
+    pthread_attr_setschedpolicy(&attr, SCHED_FIFO);
+    pthread_attr_setschedpolicy(&attr2, SCHED_FIFO);
 
     // create threads
     pthread_create(&readThread, NULL, readInput, NULL);
