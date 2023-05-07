@@ -17,7 +17,7 @@ std::string _pipe4 = "pipe4";
 
 sem_t s1, s2, s3, s4; // s1 for input, s2 for hidden layer, s3 for calculation layer, s4 for output layer
 pthread_mutex_t m1, m2;
-int neurons = 8;
+const int neurons = 8;
 int input_weights;
 
 void *readInput(void *args)
