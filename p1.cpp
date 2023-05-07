@@ -44,7 +44,7 @@ void *readInput(void *args)
 void *inputLayer(void *args)
 {
     float* input_arr = new float[input_weights];
-    char input_array[BUFF_SIZE];
+    //char input_array[BUFF_SIZE];
     int fd = open(_pipe1.c_str(), O_RDONLY);
     // Read input from pipe1
     read(fd, input_arr, sizeof(input_arr));
@@ -68,7 +68,7 @@ void *inputLayer(void *args)
 
     // Write matrix to pipe2
     int fd2;
-    fd2 = open(_pipe2.c_str(), O_WRONLY);
+    fd2 = open("pipe2", O_WRONLY);
     write(fd2, Hidden_Weights, sizeof(Hidden_Weights));
     close(fd2);
     sem_post(&s1);
