@@ -68,10 +68,10 @@ void *inputLayer(void *args)
 
     // Write matrix to pipe2
     int fd2;
-    fd2 = open("pipe2", O_WRONLY);
+    fd2 = open(_pipe2.c_str(), O_WRONLY);
     write(fd2, Hidden_Weights, sizeof(Hidden_Weights));
     close(fd2);
-    sem_post(&s1);
+    sem_post(&s2);
     pthread_exit(NULL);
 }
 /*
