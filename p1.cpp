@@ -54,7 +54,7 @@ void *inputLayer(void *args)
     // Create matrix
     // Reading format is [a b c d e f g h] without the brackets and
     // values are separated by spaces
-    std::string filename = "Hidden_Weights.txt";
+    std::string filename = "Input_Weights.txt";
     float Hidden_Weights[input_weights][neurons];
     FILE *fp = fopen(filename.c_str(), "r");
     for (int i = 0; i < input_weights; i++)
@@ -72,6 +72,7 @@ void *inputLayer(void *args)
     write(fd2, Hidden_Weights, sizeof(Hidden_Weights));
     close(fd2);
     sem_post(&s1);
+    pthread_exit(NULL);
 }
 /*
 
@@ -139,6 +140,7 @@ int main()
 
     // wait for threads to finish
     sem_wait(&s1);
+    sem_wait(&s2);
     unlink(_pipe1.c_str());
     unlink(_pipe2.c_str());
     return 0;
