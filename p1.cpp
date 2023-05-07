@@ -55,11 +55,11 @@ void *inputLayer(void *args)
     // Reading format is [a b c d e f g h] without the brackets and
     // values are separated by spaces
     std::string filename = "Hidden_Weights.txt";
-    float Hidden_Weights[8][8];
+    float Hidden_Weights[input_weights][neurons];
     FILE *fp = fopen(filename.c_str(), "r");
-    for (int i = 0; i < 8; i++)
+    for (int i = 0; i < input_weights; i++)
     {
-        for (int j = 0; j < 8; j++)
+        for (int j = 0; j < neurons; j++)
         {
             fscanf(fp, "%f", &Hidden_Weights[i][j]);
         }
