@@ -129,5 +129,7 @@ int main()
 
     // wait for threads to finish
     sem_wait(&s1);
+    unlink(_pipe1.c_str());
+    unlink(_pipe2.c_str());
     return 0;
 }
