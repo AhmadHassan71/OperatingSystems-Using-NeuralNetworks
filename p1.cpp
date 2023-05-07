@@ -11,39 +11,45 @@
 
 // pipe1 for input, pipe2 for hidden layer, pipe3 for calculation layer, pipe4 for output layer
 std::string _pipe1 = "pipe1";
-std::string _pipe2 = "pipe2"; 
+std::string _pipe2 = "pipe2";
 std::string _pipe3 = "pipe3";
 std::string _pipe4 = "pipe4";
 
-sem_t s1, s2, s3, s4;        // s1 for input, s2 for hidden layer, s3 for calculation layer, s4 for output layer
+sem_t s1, s2, s3, s4; // s1 for input, s2 for hidden layer, s3 for calculation layer, s4 for output layer
 pthread_mutex_t m1, m2;
+int neurons = 8;
+int input_weights;
 
 void *readInput(void *args)
 {
-    float input_arr[2];
-    // Read input from user
-    std::cout << "Enter Weight 1 : ";
-    std::cin >> input_arr[0];
-    std::cout << "Enter Weight 2 : ";
-    std::cin >> input_arr[1];
+    float *input_arr;
+    std::cout << "Enter number of input weights : ";
+    std::cin >> input_weights;
+    input_arr = new float[input_weights];
+
+    for (int i = 0; i < input_weights; i++)
+    {
+        // Read input from user
+        std::cout << "Enter Weight " << i << " : ";
+        std::cin >> input_arr[i];
+    }
 
     // Write input to pipe1
-    int fd=open(_pipe1.c_str(),O_WRONLY);
+    int fd = open(_pipe1.c_str(), O_WRONLY);
     write(fd, input_arr, sizeof(input_arr));
     close(fd);
     pthread_exit(NULL);
 }
 
-void *forwardLayer(void *args)
+void *inputLayer(void *args)
 {
-    float input_arr[2];
+    float* input_arr = new float[input_weights];
     char input_array[BUFF_SIZE];
-    int fd=open(_pipe1.c_str(),O_RDONLY);
+    int fd = open(_pipe1.c_str(), O_RDONLY);
     // Read input from pipe1
     read(fd, input_arr, sizeof(input_arr));
     close(fd);
-    std::cout<<"\nInput array : "<<input_arr[0]<<" "<<input_arr[1]<<std::endl;
-
+    std::cout << "\nInput array : " << input_arr[0] << " " << input_arr[1] << std::endl;
 
     // Create matrix
     // Reading format is [a b c d e f g h] without the brackets and
@@ -62,7 +68,7 @@ void *forwardLayer(void *args)
 
     // Write matrix to pipe2
     int fd2;
-    fd2=open(_pipe2.c_str(),O_WRONLY);
+    fd2 = open(_pipe2.c_str(), O_WRONLY);
     write(fd2, Hidden_Weights, sizeof(Hidden_Weights));
     close(fd2);
     sem_post(&s1);
@@ -100,6 +106,10 @@ Output layer:
 
 */
 
+/*
+    input layer
+*/
+
 int main()
 {
 
@@ -110,7 +120,7 @@ int main()
     mkfifo(_pipe1.c_str(), 0666);
     mkfifo(_pipe2.c_str(), 0666);
 
-    pthread_t readThread, forwardThread, t3, t4;
+    pthread_t readThread, inputThread, t3, t4;
 
     // set thread attributes
     pthread_attr_t attr, attr2;
@@ -125,7 +135,7 @@ int main()
 
     // create threads
     pthread_create(&readThread, NULL, readInput, NULL);
-    pthread_create(&forwardThread, NULL, forwardLayer, NULL);
+    pthread_create(&inputThread, NULL, inputLayer, NULL);
 
     // wait for threads to finish
     sem_wait(&s1);
