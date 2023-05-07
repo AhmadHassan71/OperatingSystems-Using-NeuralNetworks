@@ -6,6 +6,10 @@
 #include <pthread.h>
 #include <semaphore.h>
 #include <fcntl.h>
+//#include <fstream>
+//#include <cstring>
+
+using namespace std;
 
 #define BUFF_SIZE 100
 
@@ -60,18 +64,45 @@ void *forwardLayer(void *args)
     }
     fclose(fp);
 
+    // ifstream myFile(filename);
+    // string temp;
+
+    // int TOTALROWS = 2;
+    // for(int a = 0; a < TOTALROWS; a++){
+    //     getline(myFile, temp);
+
+    //     for(int i = 0; temp[i]!= '\0'; i++){
+    //         if(temp[i] == ',')
+    //             continue;
+    //         else{
+    //             Hidden_Weights[a][i] = temp[i];
+    //         }
+    //     }
+    // }
+
+    cout << "The read data: " <<endl;
+    for(int i = 0; i < 2; i++){
+        for(int j = 0; j < 8; j++){
+            cout << Hidden_Weights[i][j] << " ";
+        }
+        cout << endl;
+    }
+
+
     // Write matrix to pipe2
     int fd2;
     fd2=open(_pipe2.c_str(),O_WRONLY);
     write(fd2, Hidden_Weights, sizeof(Hidden_Weights));
     close(fd2);
     sem_post(&s1);
-    pthread_exit(NULL);
+    
+
+    //myFile.close();
 }
 
 void* hiddenLayer(void* args){
 
-    pthread_exit(NULL);
+    
 }
 /*
 
