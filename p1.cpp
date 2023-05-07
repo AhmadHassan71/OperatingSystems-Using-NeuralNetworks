@@ -7,7 +7,7 @@
 #include <semaphore.h>
 #include <fcntl.h>
 
-#define BUFF_SIZE 100
+// #define BUFF_SIZE 100
 
 // pipe1 for input, pipe2 for hidden layer, pipe3 for calculation layer, pipe4 for output layer
 std::string _pipe1 = "pipe1";
@@ -15,8 +15,9 @@ std::string _pipe2 = "pipe2";
 std::string _pipe3 = "pipe3";
 std::string _pipe4 = "pipe4";
 
-sem_t s1, s2, s3, s4; // s1 for input, s2 for hidden layer, s3 for calculation layer, s4 for output layer
-pthread_mutex_t m1, m2;
+sem_t s1,s2; // s1 for input, s2 for hidden layer, s3 for calculation layer, s4 for output layer
+//pthread_mutex_t m1, m2;
+
 const int neurons = 8;
 int input_weights;
 
@@ -39,25 +40,26 @@ void *readInput(void *args)
     write(fd, input_arr, sizeof(input_arr));
     close(fd);
     pthread_exit(NULL);
+    // sem_post(&s1);
 }
 
 void *inputLayer(void *args)
 {
-    float* input_arr = new float[input_weights];
-    //char input_array[BUFF_SIZE];
-    int fd = open(_pipe1.c_str(), O_RDONLY);
-    // Read input from pipe1
-    read(fd, input_arr, sizeof(input_arr));
-    close(fd);
-    std::cout << "\nInput array : " << input_arr[0] << " " << input_arr[1] << std::endl;
-
+    /* float* input_arr = new float[input_weights];
+     //char input_array[BUFF_SIZE];
+     int fd = open(_pipe1.c_str(), O_RDONLY);
+     // Read input from pipe1
+     read(fd, input_arr, sizeof(input_arr));
+     close(fd);
+     std::cout << "\nInput array : " << input_arr[0] << " " << input_arr[1] << std::endl;
+ */
     // Create matrix
     // Reading format is [a b c d e f g h] without the brackets and
     // values are separated by spaces
     std::string filename = "Input_Weights.txt";
-    float Hidden_Weights[input_weights][neurons];
+    float Hidden_Weights[2][neurons];
     FILE *fp = fopen(filename.c_str(), "r");
-    for (int i = 0; i < input_weights; i++)
+    for (int i = 0; i < 2; i++)
     {
         for (int j = 0; j < neurons; j++)
         {
@@ -67,13 +69,13 @@ void *inputLayer(void *args)
     fclose(fp);
 
     // Write matrix to pipe2
-    int fd2;
-    fd2 = open(_pipe2.c_str(), O_WRONLY);
-    write(fd2, Hidden_Weights, sizeof(Hidden_Weights));
-    close(fd2);
-    sem_post(&s2);
+    //int fd2 = open(_pipe2.c_str(), O_WRONLY);
+    //write(fd2, Hidden_Weights, sizeof(Hidden_Weights));
+    //close(fd2);
+    sem_post(&s1);
     pthread_exit(NULL);
 }
+
 /*
 Creation of a neural network with 3 layers:
 Input layer:
@@ -109,9 +111,11 @@ int main()
     // create semaphores
     sem_init(&s1, 0, 0);
 
+    unlink(_pipe1.c_str());
+    //unlink(_pipe2.c_str());
     // create pipes
     mkfifo(_pipe1.c_str(), 0666);
-    mkfifo(_pipe2.c_str(), 0666);
+    //mkfifo(_pipe2.c_str(), 0666);
 
     pthread_t readThread, inputThread, t3, t4;
 
@@ -128,12 +132,13 @@ int main()
 
     // create threads
     pthread_create(&readThread, NULL, readInput, NULL);
+    sem_wait(&s1);
+
     pthread_create(&inputThread, NULL, inputLayer, NULL);
 
     // wait for threads to finish
-    sem_wait(&s1);
-    sem_wait(&s2);
+
     unlink(_pipe1.c_str());
-    unlink(_pipe2.c_str());
+    unlink(_pipe3.c_str());
     return 0;
 }
