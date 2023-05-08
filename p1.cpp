@@ -51,7 +51,7 @@ void *forwardLayer(void *args)
 
     // Storing data to the Matrix from file
     string filename = "Hidden_Weights.txt";
-    float Hidden_Weights[8][8];
+    float Hidden_Weights[2][8];
     ifstream myFile(filename);
     string line;
     
@@ -78,10 +78,10 @@ void *forwardLayer(void *args)
 
 
     // Write matrix to pipe2                                        // PROBLEM EXIST HERE WHILE STORING DATA TO PIPE 2
-    // int fd2;
-    // fd2=open(_pipe2.c_str(),O_WRONLY);
-    // write(fd2, Hidden_Weights, sizeof(Hidden_Weights));
-    // close(fd2);
+    int fd2;
+    fd2=open(_pipe2.c_str(),O_WRONLY);
+    write(fd2, Hidden_Weights, sizeof(Hidden_Weights));
+    close(fd2);
 
     myFile.close();
     cout << "file closed successfully" << endl;
@@ -91,6 +91,11 @@ void *forwardLayer(void *args)
 }
 
 void* hiddenLayer(void* args){
+    float Hidden_Weights[2][8];
+    int fd;
+    fd = open(_pipe2.c_str(),O_RDONLY);
+    read(fd, Hidden_Weights, sizeof(Hidden_Weights));
+    close(fd);
 
     pthread_exit(NULL);
 }
@@ -109,19 +114,23 @@ int main()
     pthread_t readThread, forwardThread, t3, t4;
 
     // set thread attributes
-    pthread_attr_t attr, attr2;
+    pthread_attr_t attr, attr2, attr3;
     pthread_attr_init(&attr);
     pthread_attr_init(&attr2);
+    pthread_attr_init(&attr3);
     pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_DETACHED);
     pthread_attr_setdetachstate(&attr2, PTHREAD_CREATE_DETACHED);
+    pthread_attr_setdetachstate(&attr3, PTHREAD_CREATE_DETACHED);
 
     // set thread scheduling policy
     pthread_attr_setschedpolicy(&attr, SCHED_FIFO);
     pthread_attr_setschedpolicy(&attr2, SCHED_FIFO);
+    pthread_attr_setschedpolicy(&attr3, SCHED_FIFO);
 
     // create threads
     pthread_create(&readThread, &attr, readInput, NULL);
     pthread_create(&forwardThread, &attr2, forwardLayer, NULL);
+    pthread_create(&t3, &attr3, hiddenLayer, NULL);
 
     // wait for threads to finish
     sem_wait(&s1);
