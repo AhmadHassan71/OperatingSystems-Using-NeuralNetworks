@@ -26,6 +26,8 @@ pthread_mutex_t m1, m2;
 void *readInput(void *args)
 {
     float input_arr[2];
+
+    cout << "'Input Layer'" << endl;
     // Read input from user
     cout << "Enter Weight 1 : ";
     cin >> input_arr[0];
@@ -36,11 +38,14 @@ void *readInput(void *args)
     int fd=open(_pipe1.c_str(),O_WRONLY);
     write(fd, input_arr, sizeof(input_arr));
     close(fd);
+    sem_post(&s1);
     pthread_exit(NULL);
 }
 
 void *forwardLayer(void *args)
 {
+    sem_wait(&s1);
+    cout << "'Forward Layer'" << endl;
     float input_arr[2];
     char input_array[BUFF_SIZE];
     int fd=open(_pipe1.c_str(),O_RDONLY);
@@ -90,22 +95,13 @@ void *forwardLayer(void *args)
     pthread_exit(NULL);
 }
 
-void* hiddenLayer(void* args){
-    float Hidden_Weights[2][8];
-    int fd;
-    fd = open(_pipe2.c_str(),O_RDONLY);
-    read(fd, Hidden_Weights, sizeof(Hidden_Weights));
-    close(fd);
-
-    pthread_exit(NULL);
-}
-
 
 int main()
 {
 
     // create semaphores
     sem_init(&s1, 0, 0);
+    sem_init(&s2, 0 ,0);
 
     // create pipes
     mkfifo(_pipe1.c_str(), 0666);
@@ -130,10 +126,12 @@ int main()
     // create threads
     pthread_create(&readThread, &attr, readInput, NULL);
     pthread_create(&forwardThread, &attr2, forwardLayer, NULL);
-    pthread_create(&t3, &attr3, hiddenLayer, NULL);
+
+
+    //pthread_create(&t3, &attr3, hiddenLayer, NULL);
 
     // wait for threads to finish
-    sem_wait(&s1);
+    sem_post(&s2);
 
     cout << "Program reached at the end" << endl;
     unlink(_pipe1.c_str());
