@@ -13,6 +13,7 @@
 using namespace std;
 
 #define BUFF_SIZE 100
+int hiddenLayerCOUNT = 0;
 
 // pipe1 for input, pipe2 for hidden layer, pipe3 for calculation layer, pipe4 for output layer
 string _pipe1 = "pipe1";
@@ -126,9 +127,18 @@ int main()
     //sleep(1);
     pthread_create(&forwardThread, NULL, forwardLayer, NULL);
 
+    string temp = to_string(hiddenLayerCOUNT);
+    char* totalHiddenLayerCOUNT = new char[temp.length()];
+    char name[20] = "hiddenLayer.cpp";
+    pid_t pid = fork();
+    if(!pid){   // child
+        execl(name, totalHiddenLayerCOUNT,  NULL);
+    }
+
 
     // wait for threads to finish
     sem_wait(&s1);
+    sem_wait(&s2);
 
     cout << "Program reached at the end" << endl;
     unlink(_pipe1.c_str());

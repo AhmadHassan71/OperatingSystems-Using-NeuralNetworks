@@ -44,12 +44,6 @@ int main(int argc, char* argv[])
 {
     cout << "Entered hidden layer" << ++*(argv[1]) << endl;
 
-    // create semaphores
-
-    // create pipes
-    //mkfifo(_pipe1.c_str(), 0666);
-    //mkfifo(_pipe2.c_str(), 0666);
-
     pthread_t h;
 
     // set thread attributes
@@ -63,12 +57,9 @@ int main(int argc, char* argv[])
     // create thread
     pthread_create(&h, &attr, hiddenLayer, NULL);
 
-    // wait for threads to finish
-    sem_post(&s2);
-
     cout << "Program reached at the end of hidden Layer" << endl;
-    //unlink(_pipe1.c_str());
-    //unlink(_pipe2.c_str());
+
+    sem_post(&s2);
     return *argv[1];
 }
 
