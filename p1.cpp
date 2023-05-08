@@ -38,13 +38,13 @@ void *readInput(void *args)
     int fd=open(_pipe1.c_str(),O_WRONLY);
     write(fd, input_arr, sizeof(input_arr));
     close(fd);
-    sem_post(&s1);
+    //sem_post(&s1);
     pthread_exit(NULL);
 }
 
 void *forwardLayer(void *args)
 {
-    sem_wait(&s1);
+    //sem_wait(&s1);
     cout << "'Forward Layer'" << endl;
     float input_arr[2];
     char input_array[BUFF_SIZE];
@@ -82,11 +82,11 @@ void *forwardLayer(void *args)
     }
 
 
-    // Write matrix to pipe2                                        // PROBLEM EXIST HERE WHILE STORING DATA TO PIPE 2
-    int fd2;
-    fd2=open(_pipe2.c_str(),O_WRONLY);
-    write(fd2, Hidden_Weights, sizeof(Hidden_Weights));
-    close(fd2);
+    // Write matrix to pipe2
+    // int fd2;
+    // fd2=open(_pipe2.c_str(),O_WRONLY);
+    // write(fd2, Hidden_Weights, sizeof(Hidden_Weights));
+    // close(fd2);
 
     myFile.close();
     cout << "file closed successfully" << endl;
@@ -107,31 +107,28 @@ int main()
     mkfifo(_pipe1.c_str(), 0666);
     mkfifo(_pipe2.c_str(), 0666);
 
-    pthread_t readThread, forwardThread, t3, t4;
+    pthread_t readThread, forwardThread;
 
     // set thread attributes
     pthread_attr_t attr, attr2, attr3;
     pthread_attr_init(&attr);
     pthread_attr_init(&attr2);
-    pthread_attr_init(&attr3);
+    
     pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_DETACHED);
     pthread_attr_setdetachstate(&attr2, PTHREAD_CREATE_DETACHED);
-    pthread_attr_setdetachstate(&attr3, PTHREAD_CREATE_DETACHED);
 
     // set thread scheduling policy
     pthread_attr_setschedpolicy(&attr, SCHED_FIFO);
     pthread_attr_setschedpolicy(&attr2, SCHED_FIFO);
-    pthread_attr_setschedpolicy(&attr3, SCHED_FIFO);
 
     // create threads
-    pthread_create(&readThread, &attr, readInput, NULL);
-    pthread_create(&forwardThread, &attr2, forwardLayer, NULL);
+    pthread_create(&readThread, NULL, readInput, NULL);
+    //sleep(1);
+    pthread_create(&forwardThread, NULL, forwardLayer, NULL);
 
-
-    //pthread_create(&t3, &attr3, hiddenLayer, NULL);
 
     // wait for threads to finish
-    sem_post(&s2);
+    sem_wait(&s1);
 
     cout << "Program reached at the end" << endl;
     unlink(_pipe1.c_str());
