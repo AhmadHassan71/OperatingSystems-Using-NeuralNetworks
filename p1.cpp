@@ -35,20 +35,23 @@ void *readInput(void *args)
     cout << "Enter Weight 2 : ";
     cin >> input_arr[1];
 
+    cout << "writing pipe 1" << endl;
+    sem_post(&s1);
     // Write input to pipe1
     int fd=open(_pipe1.c_str(),O_WRONLY);
     write(fd, input_arr, sizeof(input_arr));
     close(fd);
-    //sem_post(&s1);
+
     pthread_exit(NULL);
 }
 
 void *forwardLayer(void *args)
 {
-    //sem_wait(&s1);
+    sem_wait(&s1);
     cout << "'Forward Layer'" << endl;
+
+    cout << "reading pipe 1" << endl;
     float input_arr[2];
-    char input_array[BUFF_SIZE];
     int fd=open(_pipe1.c_str(),O_RDONLY);
     // Read input from pipe1
     read(fd, input_arr, sizeof(input_arr));
@@ -82,15 +85,15 @@ void *forwardLayer(void *args)
         cout << endl;
     }
 
-
-    // Write matrix to pipe2
-    // int fd2;
-    // fd2=open(_pipe2.c_str(),O_WRONLY);
-    // write(fd2, Hidden_Weights, sizeof(Hidden_Weights));
-    // close(fd2);
+    sem_post(&s2);
+    cout << "writing pipe 2" << endl;
+    //Write matrix to pipe2
+    int fd2;
+    fd2=open(_pipe2.c_str(),O_WRONLY);
+    write(fd2, Hidden_Weights, sizeof(Hidden_Weights));
+    close(fd2);
 
     myFile.close();
-    cout << "file closed successfully" << endl;
 
     sem_post(&s1);
     pthread_exit(NULL);
@@ -127,18 +130,20 @@ int main()
     //sleep(1);
     pthread_create(&forwardThread, NULL, forwardLayer, NULL);
 
+    sem_wait(&s2);
+
     string temp = to_string(hiddenLayerCOUNT);
     char* totalHiddenLayerCOUNT = new char[temp.length()];
-    char name[20] = "hiddenLayer.cpp";
+    char name[20] = "hiddenLayer1.cpp";
     pid_t pid = fork();
+
     if(!pid){   // child
-        execl(name, totalHiddenLayerCOUNT,  NULL);
+        execl("./h1", name, totalHiddenLayerCOUNT, NULL);
     }
 
 
     // wait for threads to finish
     sem_wait(&s1);
-    sem_wait(&s2);
 
     cout << "Program reached at the end" << endl;
     unlink(_pipe1.c_str());

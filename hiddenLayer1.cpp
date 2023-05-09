@@ -12,29 +12,20 @@
 
 using namespace std;
 
-#define BUFF_SIZE 100
+sem_t s1;
 
-//int hiddenLayerCOUNT = 0;
-
-// pipe1 for input, pipe2 for hidden layer, pipe3 for calculation layer, pipe4 for output layer
-//string _pipe1 = "pipe1";
 string _pipe2 = "pipe2"; 
-//string _pipe3 = "pipe3";
-//string _pipe4 = "pipe4";
-
-sem_t s2;        // s1 for input, s2 for hidden layer, s3 for calculation layer, s4 for output layer
-pthread_mutex_t m1, m2;
 
 void* hiddenLayer(void* args){
-    //hiddenLayerCOUNT++;
-
     cout << "Hidden Layer Task doing" << endl;
+    cout << "reading pipe 2" << endl;
     // Reading data from pipe 2
     float Hidden_Weights[8][8];
     int fd;
     fd = open(_pipe2.c_str(),O_RDONLY);
     read(fd, Hidden_Weights, sizeof(Hidden_Weights));
     close(fd);
+    sem_post(&s1);
 
     pthread_exit(NULL);
 }
@@ -42,6 +33,7 @@ void* hiddenLayer(void* args){
 
 int main(int argc, char* argv[])
 {
+    sem_init(&s1, 0, 0);
     cout << "Entered hidden layer" << ++*(argv[1]) << endl;
 
     pthread_t h;
@@ -57,9 +49,18 @@ int main(int argc, char* argv[])
     // create thread
     pthread_create(&h, &attr, hiddenLayer, NULL);
 
+    sem_wait(&s1);
+    // TEMP
+
+    // // TEMP Writing data from pipe 2
+    // float Hidden_Weights[8][8];
+    // int fd;
+    // fd = open(_pipe2.c_str(),O_RDONLY);
+    // write(fd, Hidden_Weights, sizeof(Hidden_Weights));
+    // close(fd);
+
     cout << "Program reached at the end of hidden Layer" << endl;
 
-    sem_post(&s2);
     return *argv[1];
 }
 
