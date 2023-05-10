@@ -1,5 +1,4 @@
 #include <iostream>
-#include "neuralNetwork.h"
 #include <string>
 #include <unistd.h>
 #include <sys/wait.h>
@@ -10,122 +9,128 @@
 #include <fstream>
 #include <cstring>
 #include <sstream>
-#include <vector>
 
 using namespace std;
 
-// Global variables
-pthread_mutex_t mutex;
-bool finished = false;
-int remainingLayers;
+struct nodeData{
+    int id;
+    float** weights;
+    float finalWeight;
+    float* I;
+};
 
-// Layer process function
-void* layerProcess(void* args) {
-    // Unpack arguments
-    int layerIndex = *(int*) args;
-    const std::vector<int>& readPipes = *(const vector<int>*) (args + sizeof(int));
-    const std::vector<int>& writePipes = *(const vector<int>*) (args + sizeof(int) + sizeof(std::vector<int>));
-    NeuralNetwork& neuralNetwork = *(NeuralNetwork*) (args + sizeof(int) + sizeof(std::vector<int>) + sizeof(std::vector<int>));
+sem_t s1;
 
-    // Read inputs from the pipe
-    std::vector<double> inputs;
-    double input;
-    while (read(readPipes[layerIndex], &input, sizeof(double)) > 0) {
-        inputs.push_back(input);
+string _pipe2 = "pipe2"; 
+string _pipe3 = "pipe3";
+
+void* hiddenLayer(void* args){
+    nodeData* l = (nodeData*)args;
+
+    for(int i = 0; i < 8; i++){
+        if(l->id == i+1){
+            l->finalWeight = (l->I[0] * l->weights[0][i]) + (l->I[1] * l->weights[1][i]);
+        }
     }
 
-    // Perform computations
-    std::vector<double> outputs;
-    neuralNetwork.layers[layerIndex].forwardPropagate(inputs, outputs);
+    sem_post(&s1);
+    // writing to pipe 3
+    cout << "writing pipe 3" << endl;
+    int fd;
+    fd = open(_pipe3.c_str(), O_WRONLY);
+    write(fd, l, sizeof(l));
+    close(fd);
 
-    // Write outputs to the next layer through the pipe
-    for (double output : outputs) {
-        write(writePipes[layerIndex], &output, sizeof(double));
-    }
-
-    // Decrement the remaining layers
-    pthread_mutex_lock(&mutex);
-    remainingLayers--;
-    pthread_mutex_unlock(&mutex);
-
-    return NULL;
+    pthread_exit(NULL);
 }
 
-int main() {
-    NeuralNetwork neuralNetwork;
 
-    // Define the neural network layers and initialize the weights
+int main(int argc, char* argv[])
+{
+    sem_init(&s1, 0, 0);
+    cout << "Entered hidden layer" << ++*(argv[1]) << endl;
+    nodeData l;
+    cout << "reading pipe 2" << endl;
+    // Reading data from pipe 2
+    int fd;
+    fd = open(_pipe2.c_str(),O_RDONLY);
+    read(fd, &l, sizeof(l));
+    close(fd);
 
-    const int numLayers = neuralNetwork.layers.size();
-    vector<std::string> pipeNames(numLayers - 1);
-    vector<int> readPipes(numLayers - 1);
-    vector<int> writePipes(numLayers - 1);
-    vector<pthread_t> threads(numLayers - 1);
+    // Making threads of size of weights provided;
+    pthread_t* h = new pthread_t[8];
+    // set thread attributes
+    pthread_attr_t* attr = new pthread_attr_t[8];
 
-    // Create the named pipes
-    for (int i = 0; i < numLayers - 1; i++) {
-        pipeNames[i] = "/tmp/layer" + std::to_string(i) + "-" + std::to_string(i + 1) + ".pipe";
-        mkfifo(pipeNames[i].c_str(), 0666);
+    cout << "creating threads" << endl;
+    for(int i = 0; i < 8; i++){
+        pthread_attr_init(&attr[i]);
+        pthread_attr_setdetachstate(&attr[i], PTHREAD_CREATE_DETACHED);
+        // set thread scheduling policy
+        pthread_attr_setschedpolicy(&attr[i], SCHED_FIFO);
+        // create thread
+        // assigning id to thread
+        l.id = i+1;
+        pthread_create(&h[i], &attr[i], hiddenLayer, &l);
     }
 
-    // Open the pipes for reading and writing
-    for (int i = 0; i < numLayers - 1; i++) {
-        readPipes[i] = open(pipeNames[i].c_str(), O_RDONLY | O_NONBLOCK);
-        writePipes[i] = open(pipeNames[i].c_str(), O_WRONLY);
+    //sem_wait(&s1);
+
+    // reading from pipe 3
+    cout << "reading pipe 3" << endl;
+    nodeData n;
+    fd = open(_pipe3.c_str(), O_RDONLY);
+    read(fd, &n, sizeof(n));
+    close(fd);
+
+    cout << "node data read: " << endl;
+    for(int i = 0; i < 8; i++){
+        cout << n.finalWeight << " ";
     }
+    cout << endl;
 
-    // Start the layer processes
-    remainingLayers = numLayers - 1;
-    pthread_mutex_init(&mutex, NULL);
-    for (int i = 0; i < numLayers - 1; i++) {
-        void* args = malloc(sizeof(int) + 2 * sizeof(std::vector<int>) + sizeof(NeuralNetwork));
-        *((int*) args) = i;
-        //std::copy(readPipes.begin(), readPipes.end(), (std::vector<int>*)(args + sizeof(int)));
-        //std::copy(writePipes.begin(), writePipes.end(), (std::vector<int>*)(args + sizeof(int) + sizeof(std::vector<int>)));
-        *(NeuralNetwork*) (args + sizeof(int) + 2 * sizeof(std::vector<int>)) = neuralNetwork;
-        pthread_create(&threads[i], NULL, layerProcess, args);
-    }
+    cout << "Program reached at the end of hidden Layer" << endl;
 
-    // Load inputs
-    std::vector<double> inputs;
-    // Load inputs into the inputs vector
-
-    // Write inputs to the first layer's pipe
-    for (double input : inputs) {
-        write(writePipes[0], &input, sizeof(double));
-    }
-
-    // Wait for the layer processes to finish their computations
-    while (remainingLayers > 0) {
-        // Waiting for the layers to finish
-    }
-// Read the final outputs from the last layer's pipe
-    std::vector<double> outputs;
-    double output;
-    while (read(readPipes[numLayers - 2], &output, sizeof(double)) > 0) {
-        outputs.push_back(output);
-    }
-
-    // Clean up the pipes
-    for (int i = 0; i < numLayers - 1; i++) {
-        close(readPipes[i]);
-        close(writePipes[i]);
-        remove(pipeNames[i].c_str());
-    }
-
-    // Destroy the mutex
-    pthread_mutex_destroy(&mutex);
-
-    // Use the final outputs as needed
-    // ...
-
-    return 0;
+    return *argv[1];
 }
-
 
 
 /*
-1- Neuron Structure:
+
+Creation of a neural network with 3 layers:
+
+Input layer:
+input  -> 2 weights
+arr[2] -> weight1, weight2
+pipe1  -> arr[2]
+call hidden layer
+
+Hidden layer:
+    ForwardLayer
+            -->Forward propogation
+    read from pipe1
+    create Matrix
+    pipe2( use between ForwardLayer and CalcculationLayer)
+
+    CalculationLayer:
+            -->Backpropagation:
+    {0,1,2,3,4}-> exec -> process -> mat[0]->thread mat[1]->thread...
+    (communication between files through pipes)
+
+    pipe3(use between CalcculationLayer and ReturnResultLayer)
+    ReturnResultLayer:
+        calculated gradients -> f(x) -> send to output layer
+
+    pipe4(use between ReturnResultLayer and OutputLayer)
+
+Output layer:
+        weights -> output
+
+*/
+
+
+/*
+    1- Neuron Structure:
 
 struct Neuron {
     double input;
