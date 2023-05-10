@@ -16,31 +16,28 @@ using namespace std;
 struct Layer {
     float **weights;
     int numOfNeurons;
-    bool pass=false;
 
+    // Initializes all the values
     void initialize(int numNeurons) 
     {
-        numOfNeurons=numNeurons;
-
-        weights = new float * [numOfNeurons];
+        this->numOfNeurons = numNeurons;
+        this->weights = new float * [numOfNeurons];
 
         for(int i=0;i<numOfNeurons;i++)
             weights[i]= new float [numOfNeurons];
-
         for (int i=0;i<numOfNeurons;i++)
             for(int j=0;j<numOfNeurons;j++)
                 weights[i][j]=0;
-
     }
 
-    
+    // Destructor
     ~Layer()
     {
         for(int i=0;i<numOfNeurons;i++)
             delete[] weights[i];
 
-            delete[] weights;
-            weights=NULL;
+        delete[] weights;
+        weights=NULL;
     }
 }; 
 
@@ -54,43 +51,40 @@ struct NeuralNetwork {
     int **outputPipe;
     Layer * layers;
 
-
+    // Initializes a Neural Network
     void initialize(int numOfLayers, int numOfNeurons_initialLayer, int numOfNeurons_hiddenLayers, int numOfNeurons_outerLayer) 
     {
         this->numOflayers = numOfLayers;
-
         this->neurons_initial = numOfNeurons_initialLayer;
         this->neurons_hidden = numOfNeurons_hiddenLayers;
         this->neurons_outer = numOfNeurons_outerLayer;
-        
         layers = new Layer[numOfLayers];
 
         // Initializing the initial layer
-        this->layers[0].numOfNeurons = 2;
-        this->layers[0].weights = new float*[2]; 
-        for(int i = 0; i < 2; i++)
-            this->layers[0].weights[i] = new float[8];
+        this->layers[0].numOfNeurons = numOfNeurons_initialLayer;
+        this->layers[0].weights = new float*[numOfNeurons_initialLayer]; 
+        for(int i = 0; i < numOfNeurons_initialLayer; i++)
+            this->layers[0].weights[i] = new float[numOfNeurons_hiddenLayers];
 
         // Initializing hidden layers
-        int nurons = 8;
+        int nurons = numOfNeurons_hiddenLayers;
         for(int i = 1; i < this->numOflayers - 1; i++){
             this->layers[i].initialize(nurons);
         }
 
         // Initializing outer layer
-        this->layers[numOflayers-1].numOfNeurons = 8;
+        this->layers[numOflayers-1].numOfNeurons = numOfNeurons_outerLayer;
         this->layers[numOflayers-1].weights = new float*[1];
-        this->layers[numOflayers-1].weights[0] = new float[8];
+        this->layers[numOflayers-1].weights[0] = new float[numOfNeurons_outerLayer];
 
-        inputPipe= new int * [numOfLayers];
-        outputPipe= new int * [numOfLayers];
+        inputPipe = new int * [numOfLayers];
+        outputPipe = new int * [numOfLayers];
 
         for(int i=0;i<numOfLayers;i++)
         {
-            inputPipe[i]=new int[numOfLayers];
-            outputPipe[i]= new int [numOfLayers];
+            inputPipe[i] = new int[numOfLayers];
+            outputPipe[i] = new int[numOfLayers];
         }
-
         for(int i=0;i<numOfLayers;i++)
         {
             if(pipe(inputPipe[i])==-1|| pipe(outputPipe[i])==-1)
@@ -98,12 +92,8 @@ struct NeuralNetwork {
                 cout << "error creating pipes " <<endl;
             }
         }
-        
-
-        //cout << "All initializations done!" << endl;
-
     }
-
+    // Function to read all the weights from files one time
     void readInputs()
     {   
         string filename = "initLayer.txt";
@@ -111,9 +101,8 @@ struct NeuralNetwork {
         myFile.open(filename);
         string line;
 
-
         // Storing the initial_layer
-        int TOTALROWS = 2;                        // Row size depends upon rows in file.
+        int TOTALROWS = this->neurons_initial;           // Row size depends upon rows in file.
         int cols = 0;
         for(int a = 0; a < TOTALROWS; a++){
             getline(myFile, line);
@@ -125,8 +114,6 @@ struct NeuralNetwork {
             }
             cols = 0;
         }
-
-        //cout << "storing to initial Layer done!" << endl;
         myFile.close();
 
         // Storing to hidden layers
@@ -148,33 +135,27 @@ struct NeuralNetwork {
             }
             myFile.close();
         }
-        //cout << "storing to hidden Layer done!" << endl;
         
         // Storing to final outer layer
         filename = "outerLayer.txt";
-
         myFile.open(filename);
-
         int cols2 = 0;
         getline(myFile, line);
         stringstream ss(line);
-
         string substr;
         while(getline(ss, substr, ',')){
             this->layers[this->numOflayers-1].weights[0][cols2++] = stof(substr);
         }
-
-        //cout << "storing to outer Layer done!" << endl;
         myFile.close();
-        
     }
 
+    // Function for displaying all read weights (Optional)
     void displayfilesData(int numFiles){
         for(int a = 0; a < numFiles; a++){
             if(a == 0 ){   // initial layer contents
                 cout << "initial layer: " << endl;
-                for(int i = 0; i < 2; i++){
-                    for(int j = 0; j < 8; j++){
+                for(int i = 0; i < this->neurons_initial; i++){
+                    for(int j = 0; j < this->neurons_hidden; j++){
                         cout << this->layers[a].weights[i][j] << " ";
                     }
                     cout << endl;
@@ -198,14 +179,4 @@ struct NeuralNetwork {
             }
         }
     }
-    
 }; 
-
-
-/*
-    float backpropagation[2];
-    backpropagation[0]= (output[0]output[0]+output[0]+1)/2;
-    backpropagation[1]= (output[0]output[0]-output[0]+1);
-    use this for saving the values we will backpropagate
-
-*/
