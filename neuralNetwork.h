@@ -200,3 +200,12 @@ struct NeuralNetwork {
     }
     
 }; 
+
+
+/*
+    float backpropagation[2];
+    backpropagation[0]= (output[0]output[0]+output[0]+1)/2;
+    backpropagation[1]= (output[0]output[0]-output[0]+1);
+    use this for saving the values we will backpropagate
+
+*/

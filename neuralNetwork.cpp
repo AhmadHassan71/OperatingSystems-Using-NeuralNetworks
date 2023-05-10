@@ -1,212 +1,245 @@
-#include "neuralNetwork.h"
-#include <semaphore.h>
+    #include "neuralNetwork.h"
+    #include <semaphore.h>
 
-using namespace std;
+    using namespace std;
 
-NeuralNetwork n;
-int threadCount = 0;
-int allPassed = 0;
+    NeuralNetwork n;
+    int threadCount = 0;
+    int allPassed = 0;
 
-sem_t s;
+    sem_t s;
 
-pthread_mutex_t lock;
+    pthread_mutex_t lock;
 
-void * processThread(void * args)
-{
-
-    pthread_mutex_lock(&lock);
-    cout << "thread called with id: " << ++threadCount << endl;
-
-
-    NeuralNetwork neural = *(NeuralNetwork*) args;
-    //cout << "thread received currentLayer: " << neural.currentLayer << endl;
-
-    int numOfneurons=0;
-    int currentLayer=neural.currentLayer;
-
-
-    int outputNeurons=0;
-    float* input;
-    float* output;
-
-    //defining an input size to read
-    if(currentLayer==0)
-    {   numOfneurons=neural.neurons_initial;
-        outputNeurons=neural.neurons_hidden;
-        output= new float[outputNeurons];
-        input= new float [numOfneurons];
-    }
-
-    else if(currentLayer>0 && currentLayer != n.numOflayers-1)
-    {
-        numOfneurons= neural.neurons_hidden;
-        input= new float[numOfneurons];
-        output= new float[numOfneurons];
-    }
-    else if(currentLayer == n.numOflayers-1){
-        numOfneurons= neural.neurons_hidden;
-        input= new float[numOfneurons];
-        output= new float;
-    }
-
-    cout << "\nreading inputPipe["<<currentLayer<<"][0]\n" << endl;
-    read(neural.inputPipe[currentLayer][0],input,sizeof(float)*neural.layers[currentLayer].numOfNeurons);
-
-    //cout << "input = " << input[0] <<","<< input[1] << input[2] << endl;
-
-    cout<<"input recieved through pipe = ";
-    for(int i=0;i<numOfneurons;i++)
-    {
-        cout << input[i]<< ",";
-    }
-
-    cout <<endl;
-
-
-    //input layer calculations
-
-    if(currentLayer==0)
+    void *processThread(void *args)
     {
 
-        // Calculate sum for each neuron in the input layer
-        for (int i = 0; i <neural.layers[1].numOfNeurons; i++) 
+        pthread_mutex_lock(&lock);
+        cout << "thread called with id: " << ++threadCount << endl;
+
+        NeuralNetwork neural = *(NeuralNetwork *)args;
+        // cout << "thread received currentLayer: " << neural.currentLayer << endl;
+
+        int numOfneurons = 0;
+        int currentLayer = neural.currentLayer;
+
+        int outputNeurons = 0;
+        float *input;
+        float *output;
+
+        // defining an input size to read
+        if (currentLayer == 0)
         {
-            float sum = 0.0;
+            numOfneurons = neural.neurons_initial;
+            outputNeurons = neural.neurons_hidden;
+            output = new float[outputNeurons];
+            input = new float[numOfneurons];
+        }
 
-            // Iterate over the inputs from the previous layer
-            for (int j = 0; j < neural.layers[0].numOfNeurons; j++) 
+        else if (currentLayer > 0 && currentLayer != n.numOflayers - 1)
+        {
+            numOfneurons = neural.neurons_hidden;
+            input = new float[numOfneurons];
+            output = new float[numOfneurons];
+        }
+        else if (currentLayer == n.numOflayers - 1)
+        {
+            numOfneurons = neural.neurons_hidden;
+            input = new float[numOfneurons];
+            output = new float;
+        }
+
+        cout << "\nreading inputPipe[" << currentLayer << "][0]\n"
+            << endl;
+        read(neural.inputPipe[currentLayer][0], input, sizeof(float) * neural.layers[currentLayer].numOfNeurons);
+
+        // cout << "input = " << input[0] <<","<< input[1] << input[2] << endl;
+
+        cout << "input recieved through pipe = ";
+        for (int i = 0; i < numOfneurons; i++)
+        {
+            cout << input[i] << ",";
+        }
+
+        cout << endl;
+
+        // input layer calculations
+
+        if (currentLayer == 0)
+        {
+
+            // Calculate sum for each neuron in the input layer
+            for (int i = 0; i < neural.layers[1].numOfNeurons; i++)
             {
-                // Multiply the input value with the corresponding weight from the input layer
+                float sum = 0.0;
+
+                // Iterate over the inputs from the previous layer
+                for (int j = 0; j < neural.layers[0].numOfNeurons; j++)
+                {
+                    // Multiply the input value with the corresponding weight from the input layer
                     sum += input[j] * neural.layers[0].weights[j][i];
-                   //cout << "sum + = " << input[j] << " * " << neural.layers[0].weights[j][i] << "= " << sum <<endl;
-            }
-            //cout << sum << endl;
-            output[i]= sum;
-            //cout <<output[i] <<",";
+                    // cout << "sum + = " << input[j] << " * " << neural.layers[0].weights[j][i] << "= " << sum <<endl;
+                }
+                // cout << sum << endl;
+                output[i] = sum;
+                // cout <<output[i] <<",";
 
-        // Append the resulting sum to the outputs vector
-       // cout << "sum = " << sum << endl;
+                // Append the resulting sum to the outputs vector
+                // cout << "sum = " << sum << endl;
+            }
+
+            cout << endl;
+
+            neural.layers[currentLayer].pass = true;
         }
 
-        cout <<endl;
-
-        neural.layers[currentLayer].pass=true;
-    }
-
-    else if(currentLayer>0 &&  currentLayer != n.numOflayers-1)
-    {
-
-        // Calculate sum for each neuron in the input layer
-        for (int i = 0; i <neural.layers[currentLayer].numOfNeurons; i++) 
+        else if (currentLayer > 0 && currentLayer != n.numOflayers - 1)
         {
+
+            // Calculate sum for each neuron in the input layer
+            for (int i = 0; i < neural.layers[currentLayer].numOfNeurons; i++)
+            {
+                float sum = 0.0;
+
+                // Iterate over the inputs from the previous layer
+                for (int j = 0; j < neural.layers[currentLayer].numOfNeurons; j++)
+                {
+                    // Multiply the input value with the corresponding weight from the input layer
+                    sum += input[j] * neural.layers[currentLayer].weights[j][i];
+                    // cout << "sum + = " << input[j] << " * " << neural.layers[currentLayer].weights[j][i] << "= " << sum <<endl;
+                }
+                output[i] = sum;
+                // cout <<output <<",";
+
+                // Append the resulting sum to the outputs vector
+                // cout << "sum = " << sum << endl;
+            }
+
+            neural.layers[currentLayer].pass = true;
+        }
+        else if (currentLayer == n.numOflayers - 1)
+        {
+
             float sum = 0.0;
 
             // Iterate over the inputs from the previous layer
-            for (int j = 0; j < neural.layers[currentLayer].numOfNeurons; j++) 
+            for (int j = 0; j < neural.layers[currentLayer].numOfNeurons; j++)
             {
                 // Multiply the input value with the corresponding weight from the input layer
-                    sum += input[j] * neural.layers[currentLayer].weights[j][i];
-                    //cout << "sum + = " << input[j] << " * " << neural.layers[currentLayer].weights[j][i] << "= " << sum <<endl;
-            }
-            output[i]= sum;
-            //cout <<output <<",";
-
-        // Append the resulting sum to the outputs vector
-       // cout << "sum = " << sum << endl;
-        }
-
-        neural.layers[currentLayer].pass=true;
-    }
-    else if(currentLayer == n.numOflayers-1){
-        
-        float sum = 0.0;
-
-        // Iterate over the inputs from the previous layer
-        for (int j = 0; j < neural.layers[currentLayer].numOfNeurons; j++) 
-        {
-            // Multiply the input value with the corresponding weight from the input layer
                 sum += input[j] * neural.layers[currentLayer].weights[0][j];
-                //cout << "sum + = " << input[j] << " * " << neural.layers[currentLayer].weights[0][j] << "= " << sum <<endl;
+                // cout << "sum + = " << input[j] << " * " << neural.layers[currentLayer].weights[0][j] << "= " << sum <<endl;
+            }
+            output[0] = sum;
+            // cout <<output <<",";
+
+            neural.layers[currentLayer].pass = true;
         }
-        output[0]= sum;
-        //cout <<output <<",";
 
-       
-
-        neural.layers[currentLayer].pass=true;
-    }
-
-    cout<<"output to send through pipe = ";
-    if(currentLayer > 0 && currentLayer != n.numOflayers-1){
-        for(int i=0;i<neural.neurons_hidden;i++)
+        cout << "output to send through pipe = ";
+        if (currentLayer > 0 && currentLayer != n.numOflayers - 1)
         {
-            cout << output[i]<< ",";
+            for (int i = 0; i < neural.neurons_hidden; i++)
+            {
+                cout << output[i] << ",";
+            }
+            cout << endl;
         }
-        cout <<endl;
-    }
-    else if(currentLayer == n.numOflayers-1){
-        cout << output[0];
-    }
-    cout << endl;
-    
+        else if (currentLayer == n.numOflayers - 1)
+        {
+            cout << output[0];
+        }
+        cout << endl;
 
-    if (currentLayer + 1 < neural.numOflayers) 
+        if (currentLayer + 1 < neural.numOflayers)
+        {
+            n.currentLayer++;
+            cout << "currentLayer updated Val: " << n.currentLayer << endl;
+            cout << "\nwriting inputPipe[" << n.currentLayer << "][1]\n"
+                << endl;
+            write(neural.inputPipe[n.currentLayer][1], output, sizeof(float) * neural.neurons_hidden);
+
+            float backPropagate[2];
+            // cout << "reading to output pipe" << endl;
+            // read(neural.outputPipe[currentLayer+1][0], backPropagate, sizeof(float)*2);
+
+            // Writing to pipe
+            // cout << "writing to output pipe" << endl;
+            // write(neural.outputPipe[currentLayer][1], backPropagate, sizeof(float)*2);
+        }
+        else
+        {
+            float backPropagate[2];
+            backPropagate[0] = ((output[0] * output[0]) + output[0] + 1) / 2;
+            backPropagate[1] = ((output[0] * output[0]) - output[0])/2;
+
+            cout << "backpropagation Values: " << backPropagate[0] << "," << backPropagate[1] << endl;
+            cout << "writing to output pipe" << endl;
+            write(neural.outputPipe[currentLayer][1], backPropagate, sizeof(float) * 2);
+        }
+
+        // if (currentLayer == n.numOflayers - 1) {
+        //     neural.backpropagation[0] = (output[0] * output[0] + output[0] + 1) / 2;
+        //     neural.backpropagation[1] = (output[0] * output[0] - output[0] + 1);
+        // }
+
+        // hidden layer calculation
+        cout << "Thread with id: " << threadCount << " Exiting" << endl;
+        allPassed++;
+        sem_post(&s);
+        pthread_mutex_unlock(&lock);
+
+        pthread_exit(NULL);
+    }
+
+    void *backpropagate(void *args)
     {
-        n.currentLayer++;
-        cout << "currentLayer updated Val: " << n.currentLayer << endl;
-        cout << "\nwriting inputPipe["<<n.currentLayer<<"][1]\n" << endl;
-        write(neural.inputPipe[n.currentLayer][1], output, sizeof(float)*neural.neurons_hidden);
+
+        pthread_exit(NULL);
     }
-    
 
-    //hidden layer calculation
-    cout << "Thread with id: " << threadCount << " Exiting" << endl;
-    allPassed++;
-    sem_post(&s);
-    pthread_mutex_unlock(&lock);
+    int main()
+    {
 
-    pthread_exit(NULL);
+        int layers;
+        cout << "enter how many layers: ";
+        cin >> layers;
 
-}
+        sem_init(&s, 0, layers);
 
+        float input[2] = {0.1, 0.2};
 
-int main(){
+        n.initialize(layers, 2, 8, 8);
+        n.readInputs();
+        // n.displayfilesData(layers);
 
-    int layers;
-    cout << "enter how many layers: ";
-    cin >> layers;
+        // initializing
+        int layerIndex = 0;
 
-    sem_init(&s, 0, layers);
+        cout << "\nwriting inputPipe[0][1]\n"
+            << endl;
+        write(n.inputPipe[0][1], &input, sizeof(input));
 
-    float input[2]= {0.1,0.2};
+        pthread_mutex_init(&lock, NULL);
 
-    n.initialize(layers,2,8,8);
-    n.readInputs();
-    //n.displayfilesData(layers);
+        pthread_t pid[layers];
 
+        for (int i = 0; i < layers; i++)
+            pthread_create(&pid[i], NULL, processThread, (void *)&n);
 
-    //initializing
-    int layerIndex=0;
+        for (int i = 0; i < layers; i++)
+            pthread_join(pid[i], NULL);
 
-    cout << "\nwriting inputPipe[0][1]\n" << endl;
-    write(n.inputPipe[0][1],&input,sizeof(input));
+        for (int i = 0; i < n.numOflayers; i++)
+            sem_wait(&s);
 
-    pthread_mutex_init(&lock,NULL);
+        float finalOutput[2];
+        cout << "reading to output pipe" << endl;
+        // backpropagate(finalOutput[0]);
+        read(n.outputPipe[n.numOflayers - 1][0], finalOutput, sizeof(float) * 2);
 
-    pthread_t pid[layers];
+        cout << "finalOutput" << finalOutput[0] << "," << finalOutput[1] << endl;
 
-    for(int i=0;i<layers;i++)
-        pthread_create(&pid[i],NULL,processThread,(void*)&n);
-    
+        pthread_mutex_destroy(&lock);
 
-    for(int i=0;i<layers;i++)
-        pthread_join(pid[i],NULL);
-    
-
-    for(int i = 0; i < n.numOflayers; i++)
-        sem_wait(&s);
-    
-    pthread_mutex_destroy(&lock);
-
-    return 0;
-}
+        return 0;
+    }
