@@ -5,6 +5,8 @@ using namespace std;
 
 NeuralNetwork n;
 int threadCount = 0;
+int allPassed = 0;
+
 sem_t s;
 
 pthread_mutex_t lock;
@@ -17,30 +19,14 @@ void * processThread(void * args)
 
 
     NeuralNetwork neural = *(NeuralNetwork*) args;
-    cout << "thread received currentLayer: " << neural.currentLayer << endl;
+    //cout << "thread received currentLayer: " << neural.currentLayer << endl;
 
     int numOfneurons=0;
     int currentLayer=neural.currentLayer;
-    bool allPassed = true;
 
-    // if(currentLayer>0)
-    // {
-    //     for(int i = 0; i < currentLayer; i++){
-    //         if(neural.layers[i].pass==false)
-    //             allPassed = false;
-    //     }
-    //     while(allPassed == false){
-    //         cout << "waiting to enter next process " <<endl;
-    //         pthread_mutex_unlock(&lock);
-
-    //         usleep(1000);
-
-    //         pthread_mutex_lock(&lock);
-    //     }
-    // }
 
     int outputNeurons=0;
-    float * input;
+    float* input;
     float* output;
 
     //defining an input size to read
@@ -51,11 +37,16 @@ void * processThread(void * args)
         input= new float [numOfneurons];
     }
 
-    else if(currentLayer>0)
+    else if(currentLayer>0 && currentLayer != n.numOflayers-1)
     {
         numOfneurons= neural.neurons_hidden;
         input= new float[numOfneurons];
-        output=new float[numOfneurons];
+        output= new float[numOfneurons];
+    }
+    else if(currentLayer == n.numOflayers-1){
+        numOfneurons= neural.neurons_hidden;
+        input= new float[numOfneurons];
+        output= new float;
     }
 
     cout << "\nreading inputPipe["<<currentLayer<<"][0]\n" << endl;
@@ -102,11 +93,11 @@ void * processThread(void * args)
         neural.layers[currentLayer].pass=true;
     }
 
-    else if(currentLayer>0)
+    else if(currentLayer>0 &&  currentLayer != n.numOflayers-1)
     {
 
         // Calculate sum for each neuron in the input layer
-        for (int i = 0; i <neural.layers[currentLayer+1].numOfNeurons; i++) 
+        for (int i = 0; i <neural.layers[currentLayer].numOfNeurons; i++) 
         {
             float sum = 0.0;
 
@@ -126,13 +117,38 @@ void * processThread(void * args)
 
         neural.layers[currentLayer].pass=true;
     }
+    else if(currentLayer == n.numOflayers-1){
+        
+        float sum = 0.0;
+
+        // Iterate over the inputs from the previous layer
+        for (int j = 0; j < neural.layers[currentLayer].numOfNeurons; j++) 
+        {
+            // Multiply the input value with the corresponding weight from the input layer
+                sum += input[j] * neural.layers[currentLayer].weights[0][j];
+                //cout << "sum + = " << input[j] << " * " << neural.layers[currentLayer].weights[0][j] << "= " << sum <<endl;
+        }
+        output[0]= sum;
+        //cout <<output <<",";
+
+       
+
+        neural.layers[currentLayer].pass=true;
+    }
 
     cout<<"output to send through pipe = ";
-    for(int i=0;i<neural.neurons_hidden;i++)
-    {
-        cout << output[i]<< ",";
+    if(currentLayer > 0 && currentLayer != n.numOflayers-1){
+        for(int i=0;i<neural.neurons_hidden;i++)
+        {
+            cout << output[i]<< ",";
+        }
+        cout <<endl;
     }
-    cout <<endl;
+    else if(currentLayer == n.numOflayers-1){
+        cout << output[0];
+    }
+    cout << endl;
+    
 
     if (currentLayer + 1 < neural.numOflayers) 
     {
@@ -145,6 +161,8 @@ void * processThread(void * args)
 
     //hidden layer calculation
     cout << "Thread with id: " << threadCount << " Exiting" << endl;
+    allPassed++;
+    sem_post(&s);
     pthread_mutex_unlock(&lock);
 
     pthread_exit(NULL);
@@ -162,7 +180,7 @@ int main(){
 
     float input[2]= {0.1,0.2};
 
-    n.initialize(layers,2,8,1);
+    n.initialize(layers,2,8,8);
     n.readInputs();
     //n.displayfilesData(layers);
 
@@ -181,15 +199,12 @@ int main(){
         pthread_create(&pid[i],NULL,processThread,(void*)&n);
     
 
-    //this is just to join, not to recieve an ouput
-
     for(int i=0;i<layers;i++)
-        pthread_join(pid[0],NULL);
+        pthread_join(pid[i],NULL);
     
-    sem_wait(&s);
-    int semVal;
-    sem_getvalue(&s, &semVal);
-    while(semVal > 0);
+
+    for(int i = 0; i < n.numOflayers; i++)
+        sem_wait(&s);
     
     pthread_mutex_destroy(&lock);
 

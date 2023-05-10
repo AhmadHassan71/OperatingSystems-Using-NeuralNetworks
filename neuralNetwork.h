@@ -78,10 +78,9 @@ struct NeuralNetwork {
         }
 
         // Initializing outer layer
-        this->layers[numOflayers-1].numOfNeurons = 1;
-        this->layers[numOflayers-1].weights = new float*[8];
-        for(int i = 0; i < 8; i++)
-            this->layers[numOflayers-1].weights[i] = new float;
+        this->layers[numOflayers-1].numOfNeurons = 8;
+        this->layers[numOflayers-1].weights = new float*[1];
+        this->layers[numOflayers-1].weights[0] = new float[8];
 
         inputPipe= new int * [numOfLayers];
         outputPipe= new int * [numOfLayers];
@@ -156,18 +155,23 @@ struct NeuralNetwork {
 
         myFile.open(filename);
 
-        int TOTALROWS2 = 8;                        // Row size depends upon rows in file.
-        for(int a = 0; a < TOTALROWS2; a++){
-            getline(myFile, line);
-            this->layers[this->numOflayers-1].weights[a][0] = stof(line);
+        int cols2 = 0;
+        getline(myFile, line);
+        stringstream ss(line);
+
+        string substr;
+        while(getline(ss, substr, ',')){
+            this->layers[this->numOflayers-1].weights[0][cols2++] = stof(substr);
         }
+
         //cout << "storing to outer Layer done!" << endl;
         myFile.close();
+        
     }
 
     void displayfilesData(int numFiles){
         for(int a = 0; a < numFiles; a++){
-            if(a == 0){   // initial layer contents
+            if(a == 0 ){   // initial layer contents
                 cout << "initial layer: " << endl;
                 for(int i = 0; i < 2; i++){
                     for(int j = 0; j < 8; j++){
@@ -179,8 +183,9 @@ struct NeuralNetwork {
             else if(a == numFiles-1){  // outer layer contents
                 cout << "outer layer: " << endl;
                 for(int i = 0; i < 8; i++){
-                    cout << this->layers[a].weights[i][0] << endl;
+                    cout << this->layers[a].weights[0][i] << " ";
                 }
+                cout << endl;
             }
             else{  // hidden layers contents
                 cout << "hidden layers " << a << ":"<< endl;
