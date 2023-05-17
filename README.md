@@ -36,15 +36,9 @@ Furthermore, backpropagation includes:
 • Process Synchronization: The system should ensure that only one process accesses the shared
 resources such as weights and biases at any given time to avoid race conditions. This can be
 achieved using synchronization primitives such as semaphores or locks.
-• Memory Management: The operating system should provide a mechanism for allocating and
-deallocating memory for the neural network processes and threads. The system should also
-ensure that each process and thread has access to its own memory space to avoid conflicts.
 
-• Inter-Process Communication: The operating system should provide a mechanism for inter-
-process communication (IPC) through pipes or other forms of communication to exchange
+• Memory Management: The operating system should provide a mechanism for allocating and deallocating memory for the neural network processes and threads. The system should also ensure that each process and thread has access to its own memory space to avoid conflicts.
 
-information such as weights and biases between processes during backpropagation.
-• Thread Management: The system should manage threads efficiently to allow parallel processing
-of inputs and reduce the overall training time of the neural network.
-• Process Scheduling: The operating system should schedule processes and threads efficiently to
-ensure that the neural network training process runs smoothly and efficiently.
+• Inter-Process Communication: The operating system should provide a mechanism for inter- process communication (IPC) through pipes or other forms of communication to exchange information such as weights and biases between processes during backpropagation.
+• Thread Management: The system should manage threads efficiently to allow parallel processing of inputs and reduce the overall training time of the neural network.
+• Process Scheduling: The operating system should schedule processes and threads efficiently to ensure that the neural network training process runs smoothly and efficiently.
